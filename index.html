@@ -140,20 +140,22 @@
         }
 
         .payment-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
+            max-width: 500px;
+            margin: 0 auto;
         }
 
         .payment-btn {
-            padding: 15px 30px;
-            font-size: 18px;
+            padding: 20px 15px;
+            font-size: 16px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: bold;
+            text-align: center;
         }
 
         .payment-btn:hover {
@@ -161,18 +163,23 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
-        .btn-efectivo {
-            background: #4CAF50;
+        .btn-efvo-luli {
+            background: #1976D2;
             color: white;
         }
 
-        .btn-luli {
-            background: #2196F3;
+        .btn-alias-luli {
+            background: #42A5F5;
             color: white;
         }
 
-        .btn-angie {
-            background: #FF9800;
+        .btn-efvo-angie {
+            background: #F57C00;
+            color: white;
+        }
+
+        .btn-alias-angie {
+            background: #FFB74D;
             color: white;
         }
 
@@ -236,7 +243,8 @@
             }
             
             .payment-buttons {
-                flex-direction: column;
+                grid-template-columns: 1fr;
+                gap: 10px;
             }
             
             .modal-buttons {
@@ -264,9 +272,10 @@
         <div class="total-section">
             <div class="total-amount">Total: $<span id="totalAmount">0</span></div>
             <div class="payment-buttons">
-                <button class="payment-btn btn-efectivo" onclick="showPaymentModal('Efectivo')">💵 Efectivo</button>
-                <button class="payment-btn btn-luli" onclick="showPaymentModal('Alias Luli')">🏦 Alias Luli</button>
-                <button class="payment-btn btn-angie" onclick="showPaymentModal('Alias Angie')">🏦 Alias Angie</button>
+                <button class="payment-btn btn-efvo-luli" onclick="showPaymentModal('Efvo Luli')">💵 Efvo Luli</button>
+                <button class="payment-btn btn-efvo-angie" onclick="showPaymentModal('Efvo Angie')">💵 Efvo Angie</button>
+                <button class="payment-btn btn-alias-luli" onclick="showPaymentModal('Alias Luli')">🏦 Alias Luli</button>
+                <button class="payment-btn btn-alias-angie" onclick="showPaymentModal('Alias Angie')">🏦 Alias Angie</button>
             </div>
         </div>
     </div>
