@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feria Luli Angie</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .suggestions {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .suggestion-item.sold {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .cart-section {
+            margin-bottom: 30px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+
+        .cart-item.sold {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #c62828;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-price {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .remove-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .remove-btn:hover {
+            background: #cc0000;
+        }
+
+        .total-section {
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .total-amount {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .payment-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .payment-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .payment-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-efectivo {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-luli {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-angie {
+            background: #FF9800;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-cancel {
+            background: #666;
+            color: white;
+        }
+
+        .btn-confirm {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .empty-cart {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .payment-buttons {
+                flex-direction: column;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ Feria Luli Angie</h1>
+        
+        <div class="search-section">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar producto por código, nombre o descripción...">
+            <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <div class="cart-section">
+            <h2>Productos Seleccionados</h2>
+            <div id="cartItems">
+                <div class="empty-cart">No hay productos seleccionados</div>
+            </div>
+        </div>
+
+        <div class="total-section">
+            <div class="total-amount">Total: $<span id="totalAmount">0</span></div>
+            <div class="payment-buttons">
+                <button class="payment-btn btn-efectivo" onclick="showPaymentModal('Efectivo')">💵 Efectivo</button>
+                <button class="payment-btn btn-luli" onclick="showPaymentModal('Alias Luli')">🏦 Alias Luli</button>
+                <button class="payment-btn btn-angie" onclick="showPaymentModal('Alias Angie')">🏦 Alias Angie</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <h2>Confirmar Venta</h2>
+            <p id="paymentMessage"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="modal-btn btn-confirm" onclick="confirmSale()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://lgfvmqmbhhpbtxczpdln.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZnZtcW1iaGhwYnR4Y3pwZGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NTk5MjMsImV4cCI6MjA2NzIzNTkyM30.Akur-f50hXwTkP3pshnMywEUUj0Ev8jCFNo88NiyyVI';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Variables globales
+        let productos = [];
+        let carrito = [];
+        let currentPaymentMethod = '';
+
+        // Cargar productos al iniciar
+        async function loadProductos() {
+            try {
+                const { data, error } = await supabase
+                    .from('productos')
+                    .select('*')
+                    .order('codigo');
+                
+                if (error) throw error;
+                productos = data;
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+                alert('Error al cargar productos');
+            }
+        }
+
+        // Buscar productos
+        function searchProductos(query) {
+            if (!query.trim()) return [];
+            
+            const searchTerm = query.toLowerCase();
+            return productos.filter(producto => 
+                producto.codigo.toLowerCase().includes(searchTerm) ||
+                producto.nombre.toLowerCase().includes(searchTerm) ||
+                producto.descripcion.toLowerCase().includes(searchTerm) ||
+                producto.tipo.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        // Mostrar sugerencias
+        function showSuggestions(results) {
+            const suggestionsDiv = document.getElementById('suggestions');
+            
+            if (results.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            suggestionsDiv.innerHTML = results.map(producto => `
+                <div class="suggestion-item ${producto.vendido ? 'sold' : ''}" 
+                     onclick="addToCart(${producto.id})">
+                    <strong>${producto.codigo}</strong> - ${producto.nombre} - ${producto.descripcion}
+                    <br><small>${producto.tipo} | $${producto.precio}</small>
+                    ${producto.vendido ? '<br><small>⚠️ YA VENDIDO</small>' : ''}
+                </div>
+            `).join('');
+
+            suggestionsDiv.style.display = 'block';
+        }
+
+        // Agregar al carrito
+        function addToCart(productoId) {
+            const producto = productos.find(p => p.id === productoId);
+            if (!producto) return;
+
+            // Verificar si ya está en el carrito
+            if (carrito.find(item => item.id === productoId)) {
+                alert('Este producto ya está en el carrito');
+                return;
+            }
+
+            carrito.push(producto);
+            updateCartDisplay();
+            updateTotal();
+            
+            // Limpiar búsqueda
+            document.getElementById('searchInput').value = '';
+            document.getElementById('suggestions').style.display = 'none';
+        }
+
+        // Remover del carrito
+        function removeFromCart(productoId) {
+            carrito = carrito.filter(item => item.id !== productoId);
+            updateCartDisplay();
+            updateTotal();
+        }
+
+        // Actualizar display del carrito
+        function updateCartDisplay() {
+            const cartItemsDiv = document.getElementById('cartItems');
+            
+            if (carrito.length === 0) {
+                cartItemsDiv.innerHTML = '<div class="empty-cart">No hay productos seleccionados</div>';
+                return;
+            }
+
+            cartItemsDiv.innerHTML = carrito.map(item => `
+                <div class="cart-item ${item.vendido ? 'sold' : ''}">
+                    <div class="cart-item-info">
+                        <strong>${item.codigo}</strong> - ${item.nombre}
+                        <br><small>${item.descripcion}</small>
+                        ${item.vendido ? '<br><small>⚠️ YA VENDIDO</small>' : ''}
+                    </div>
+                    <div class="cart-item-price">$${item.precio}</div>
+                    <button class="remove-btn" onclick="removeFromCart(${item.id})">❌</button>
+                </div>
+            `).join('');
+        }
+
+        // Actualizar total
+        function updateTotal() {
+            const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
+            document.getElementById('totalAmount').textContent = total.toLocaleString();
+        }
+
+        // Mostrar modal de pago
+        function showPaymentModal(method) {
+            if (carrito.length === 0) {
+                alert('No hay productos seleccionados');
+                return;
+            }
+
+            currentPaymentMethod = method;
+            const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
+            
+            document.getElementById('paymentMessage').innerHTML = `
+                <strong>Venta mediante ${method}</strong><br>
+                por $${total.toLocaleString()}<br><br>
+                ¿Confirmar venta?
+            `;
+            
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        // Cerrar modal
+        function closeModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        // Confirmar venta
+        async function confirmSale() {
+            try {
+                const fechaHora = new Date().toISOString();
+                
+                // Actualizar todos los productos del carrito
+                for (const item of carrito) {
+                    const { error } = await supabase
+                        .from('productos')
+                        .update({
+                            vendido: 1,
+                            fecha_hora_venta: fechaHora,
+                            medio_de_pago: currentPaymentMethod
+                        })
+                        .eq('id', item.id);
+                    
+                    if (error) throw error;
+                }
+
+                alert('¡Venta confirmada exitosamente!');
+                
+                // Recargar la página
+                window.location.reload();
+                
+            } catch (error) {
+                console.error('Error confirmando venta:', error);
+                alert('Error al confirmar la venta');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const query = e.target.value;
+            if (query.length >= 2) {
+                const results = searchProductos(query);
+                showSuggestions(results);
+            } else {
+                document.getElementById('suggestions').style.display = 'none';
+            }
+        });
+
+        // Cerrar sugerencias al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-section')) {
+                document.getElementById('suggestions').style.display = 'none';
+            }
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('paymentModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Inicializar la aplicación
+        loadProductos();
+    </script>
+</body>
+</html>
