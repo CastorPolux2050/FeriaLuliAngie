@@ -196,7 +196,7 @@
 
         .modal-content {
             background-color: white;
-            margin: 15% auto;
+            margin: 10% auto;
             padding: 30px;
             border-radius: 15px;
             width: 90%;
@@ -204,27 +204,32 @@
             text-align: center;
         }
 
-        .discount-section {
-            background: #f0f8ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 2px solid #4CAF50;
-        }
-
-        .discount-checkbox {
-            margin-right: 10px;
-            transform: scale(1.2);
-        }
-
-        .discount-text {
-            color: #2e7d32;
-            font-weight: bold;
-        }
-
-        .price-breakdown {
+        .annotation-section {
+            margin: 20px 0;
             text-align: left;
-            margin: 10px 0;
+        }
+
+        .annotation-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .annotation-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            font-family: Arial, sans-serif;
+        }
+
+        .annotation-input:focus {
+            outline: none;
+            border-color: #667eea;
         }
 
         .modal-buttons {
@@ -309,13 +314,9 @@
             <h2>Confirmar Venta</h2>
             <p id="paymentMessage"></p>
             
-            <!-- Sección de descuento (se muestra solo si es mayor a $100,000) -->
-            <div id="discountSection" class="discount-section" style="display: none;">
-                <label class="discount-text">
-                    <input type="checkbox" id="discountCheckbox" class="discount-checkbox" onchange="updateModalPrices()">
-                    Aplicar descuento del 10% (venta mayor a $100,000)
-                </label>
-                <div id="priceBreakdown" class="price-breakdown"></div>
+            <div class="annotation-section">
+                <label class="annotation-label">Anotación:</label>
+                <textarea id="annotationInput" class="annotation-input" placeholder="Agregar comentario o anotación (opcional)..."></textarea>
             </div>
             
             <div class="modal-buttons">
@@ -335,7 +336,6 @@
         let productos = [];
         let carrito = [];
         let currentPaymentMethod = '';
-        let originalTotal = 0;
 
         // Cargar productos al iniciar
         async function loadProductos() {
@@ -450,64 +450,18 @@
             }
 
             currentPaymentMethod = method;
-            originalTotal = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
+            const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
             
-            // Mostrar sección de descuento si el total es mayor a $100,000
-            const discountSection = document.getElementById('discountSection');
-            const discountCheckbox = document.getElementById('discountCheckbox');
+            document.getElementById('paymentMessage').innerHTML = `
+                <strong>Venta mediante ${method}</strong><br>
+                por $${total.toLocaleString()}<br><br>
+                ¿Confirmar venta?
+            `;
             
-            if (originalTotal > 100000) {
-                discountSection.style.display = 'block';
-                discountCheckbox.checked = false; // Reset checkbox
-            } else {
-                discountSection.style.display = 'none';
-            }
+            // Limpiar el campo de anotación
+            document.getElementById('annotationInput').value = '';
             
-            updateModalPrices();
             document.getElementById('paymentModal').style.display = 'block';
-        }
-
-        // Actualizar precios en el modal
-        function updateModalPrices() {
-            const discountCheckbox = document.getElementById('discountCheckbox');
-            const isDiscountApplied = discountCheckbox.checked;
-            
-            let finalTotal = originalTotal;
-            let discountAmount = 0;
-            
-            if (isDiscountApplied) {
-                discountAmount = originalTotal * 0.1;
-                finalTotal = originalTotal - discountAmount;
-            }
-            
-            // Actualizar mensaje principal
-            let message = `<strong>Venta mediante ${currentPaymentMethod}</strong><br>`;
-            
-            if (isDiscountApplied) {
-                message += `por ${finalTotal.toLocaleString()}<br><br>`;
-            } else {
-                message += `por ${originalTotal.toLocaleString()}<br><br>`;
-            }
-            
-            message += '¿Confirmar venta?';
-            
-            document.getElementById('paymentMessage').innerHTML = message;
-            
-            // Actualizar desglose de precios si hay descuento
-            if (originalTotal > 100000) {
-                const priceBreakdown = document.getElementById('priceBreakdown');
-                if (isDiscountApplied) {
-                    priceBreakdown.innerHTML = `
-                        <div>Subtotal: ${originalTotal.toLocaleString()}</div>
-                        <div>Descuento (10%): -${discountAmount.toLocaleString()}</div>
-                        <div style="font-weight: bold; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;">
-                            Total final: ${finalTotal.toLocaleString()}
-                        </div>
-                    `;
-                } else {
-                    priceBreakdown.innerHTML = `<div>Total: ${originalTotal.toLocaleString()}</div>`;
-                }
-            }
         }
 
         // Cerrar modal
@@ -519,44 +473,24 @@
         async function confirmSale() {
             try {
                 const fechaHora = new Date().toISOString();
-                
-                // Calcular total final (con o sin descuento)
-                const discountCheckbox = document.getElementById('discountCheckbox');
-                const isDiscountApplied = discountCheckbox.checked && originalTotal > 100000;
-                
-                let finalTotal = originalTotal;
-                if (isDiscountApplied) {
-                    finalTotal = originalTotal * 0.9; // Aplicar 10% descuento
-                }
+                const anotacion = document.getElementById('annotationInput').value.trim();
                 
                 // Actualizar todos los productos del carrito
                 for (const item of carrito) {
-                    // Si hay descuento, calcular precio proporcional para cada producto
-                    let finalPrice = item.precio;
-                    if (isDiscountApplied) {
-                        finalPrice = item.precio * 0.9;
-                    }
-                    
                     const { error } = await supabase
                         .from('productos')
                         .update({
                             vendido: 1,
                             fecha_hora_venta: fechaHora,
                             medio_de_pago: currentPaymentMethod,
-                            precio: finalPrice // Actualizar con precio final (con descuento si aplica)
+                            anotacion: anotacion || null
                         })
                         .eq('id', item.id);
                     
                     if (error) throw error;
                 }
 
-                let successMessage = '¡Venta confirmada exitosamente!';
-                if (isDiscountApplied) {
-                    const discountAmount = originalTotal - finalTotal;
-                    successMessage += `\n\nDescuento aplicado: ${discountAmount.toLocaleString()}\nTotal final: ${finalTotal.toLocaleString()}`;
-                }
-                
-                alert(successMessage);
+                alert('¡Venta confirmada exitosamente!');
                 
                 // Recargar la página
                 window.location.reload();
