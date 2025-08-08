@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feria Luli Angie</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 2.2em; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+
+        .search-section { margin-bottom: 24px; }
+        .search-input { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; transition: border-color 0.3s; }
+        .search-input:focus { outline: none; border-color: #667eea; }
+        .suggestions { max-height: 260px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: white; display: none; margin-top: 8px; }
+        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: background-color 0.2s; }
+        .suggestion-item:hover { background: #f5f5f5; }
+        .suggestion-item.sold { background: #ffebee; color: #c62828; }
+
+        .cart-section { margin-bottom: 22px; }
+        .cart-section h2 { margin-bottom: 12px; }
+        .empty-cart { text-align: center; color: #666; font-style: italic; padding: 16px; }
+
+        /* Tabla del carrito */
+        .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #e5e5e5; border-radius: 10px; }
+        table.cart-table { width: 100%; border-collapse: collapse; }
+        table.cart-table thead th { position: sticky; top: 0; background: #f8f8f8; z-index: 1; text-align: left; font-weight: bold; color: #333; border-bottom: 1px solid #e5e5e5; padding: 12px; }
+        table.cart-table tbody td { padding: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        table.cart-table tr.sold { background: #fffbfb; }
+        .td-price, .td-price-disc { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .td-actions { text-align: right; }
+        .discount-input { width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: right; }
+        .badge-sold { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #ffebee; color: #c62828; font-size: 12px; font-weight: bold; }
+        .remove-btn { background: #ff4444; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .remove-btn:hover { background: #cc0000; }
+
+        .total-section { background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 24px 0 8px; text-align: center; }
+        .total-amount { font-size: 2em; font-weight: bold; color: #333; margin-bottom: 16px; }
+
+        .payment-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 720px; margin: 0 auto; }
+        .payment-btn { padding: 16px 12px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold; text-align: center; }
+        .payment-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        .btn-efvo-luli { background: #1976D2; color: white; }
+        .btn-alias-luli { background: #42A5F5; color: white; }
+        .btn-efvo-angie { background: #F57C00; color: white; }
+        .btn-alias-angie { background: #FFB74D; color: white; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,0.5); }
+        .modal-content { background: #fff; margin: 6% auto; padding: 26px; border-radius: 14px; width: 92%; max-width: 560px; text-align: center; }
+        .annotation-section { margin: 18px 0; text-align: left; }
+        .annotation-label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .annotation-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 60px; font-family: Arial, sans-serif; }
+        .annotation-input:focus { outline: none; border-color: #667eea; }
+        .modal-buttons { display: flex; gap: 14px; justify-content: center; margin-top: 16px; }
+        .modal-btn { padding: 12px 24px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #666; color: white; }
+        .btn-confirm { background: #4CAF50; color: white; }
+
+        @media (max-width: 800px) {
+            .payment-buttons { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 520px) {
+            .payment-buttons { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ Feria Luli Angie</h1>
+
+        <div class="search-section">
+            <input id="searchInput" class="search-input" placeholder="Buscar producto por código, nombre o descripción..." />
+            <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <div class="cart-section">
+            <h2>Productos Seleccionados</h2>
+            <div id="cartItems">
+                <div class="empty-cart">No hay productos seleccionados</div>
+            </div>
+        </div>
+
+        <div class="total-section">
+            <div class="total-amount">Total: <span id="totalAmount">$0</span></div>
+            <div class="payment-buttons">
+                <button class="payment-btn btn-efvo-luli" onclick="showPaymentModal('Efvo Luli')">💵 Efvo Luli</button>
+                <button class="payment-btn btn-efvo-angie" onclick="showPaymentModal('Efvo Angie')">💵 Efvo Angie</button>
+                <button class="payment-btn btn-alias-luli" onclick="showPaymentModal('Alias Luli')">🏦 Alias Luli</button>
+                <button class="payment-btn btn-alias-angie" onclick="showPaymentModal('Alias Angie')">🏦 Alias Angie</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <h2>Confirmar Venta</h2>
+            <p id="paymentMessage"></p>
+
+            <div class="annotation-section">
+                <label class="annotation-label">Anotación:</label>
+                <textarea id="annotationInput" class="annotation-input" placeholder="Agregar comentario o anotación (opcional)..."></textarea>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="modal-btn btn-confirm" onclick="confirmSale()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === Configuración de Supabase ===
+        const supabaseUrl = 'https://lgfvmqmbhhpbtxczpdln.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZnZtcW1iaGhwYnR4Y3pwZGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NTk5MjMsImV4cCI6MjA2NzIzNTkyM30.Akur-f50hXwTkP3pshnMywEUUj0Ev8jCFNo88NiyyVI';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // === Estado ===
+        let productos = [];
+        let carrito = [];
+        let descuentos = {}; // { [productoId]: porcentaje }
+        let currentPaymentMethod = '';
+
+        // === Utilidades ===
+        const fmt = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const money = n => `$${fmt.format(n)}`;
+
+        function precioConDescuento(item) {
+            const d = Number(descuentos[item.id] || 0);
+            const p = Number(item.precio || 0);
+            const final = p * (1 - (d / 100));
+            return Math.max(0, final);
+        }
+
+        // === Carga de productos ===
+        async function loadProductos() {
+            try {
+                const { data, error } = await supabase
+                    .from('productos')
+                    .select('*')
+                    .order('codigo');
+                if (error) throw error;
+                productos = data || [];
+            } catch (err) {
+                console.error('Error cargando productos:', err);
+                alert('Error al cargar productos');
+            }
+        }
+
+        // === Búsqueda ===
+        function searchProductos(query) {
+            if (!query.trim()) return [];
+            const q = query.toLowerCase();
+            return productos.filter(p =>
+                (p.codigo || '').toLowerCase().includes(q) ||
+                (p.nombre || '').toLowerCase().includes(q) ||
+                (p.descripcion || '').toLowerCase().includes(q) ||
+                (p.tipo || '').toLowerCase().includes(q)
+            );
+        }
+
+        function showSuggestions(results) {
+            const el = document.getElementById('suggestions');
+            if (!results.length) { el.style.display = 'none'; return; }
+            el.innerHTML = results.map(p => `
+                <div class="suggestion-item ${p.vendido ? 'sold' : ''}" onclick="addToCart(${p.id})">
+                    <strong>${p.codigo}</strong> - ${p.nombre} - ${p.descripcion || ''}
+                    <br><small>${p.tipo || ''} | ${money(p.precio)}</small>
+                    ${p.vendido ? '<br><small>⚠️ YA VENDIDO</small>' : ''}
+                </div>
+            `).join('');
+            el.style.display = 'block';
+        }
+
+        // === Carrito ===
+        function addToCart(productoId) {
+            const item = productos.find(p => p.id === productoId);
+            if (!item) return;
+            if (carrito.find(i => i.id === productoId)) { alert('Este producto ya está en el carrito'); return; }
+            carrito.push(item);
+            if (!(productoId in descuentos)) descuentos[productoId] = 0; // default 0%
+            updateCartDisplay();
+            updateTotal();
+            document.getElementById('searchInput').value = '';
+            document.getElementById('suggestions').style.display = 'none';
+        }
+
+        function removeFromCart(productoId) {
+            carrito = carrito.filter(i => i.id !== productoId);
+            delete descuentos[productoId];
+            updateCartDisplay();
+            updateTotal();
+        }
+
+        function updateDiscount(productoId, value) {
+            let v = parseFloat(value);
+            if (isNaN(v)) v = 0;
+            v = Math.max(0, Math.min(100, v));
+            descuentos[productoId] = v;
+            updateCartDisplay();
+            updateTotal();
+        }
+
+        function updateCartDisplay() {
+            const mount = document.getElementById('cartItems');
+            if (!carrito.length) { mount.innerHTML = '<div class="empty-cart">No hay productos seleccionados</div>'; return; }
+
+            const rows = carrito.map(item => {
+                const d = descuentos[item.id] || 0;
+                const p = Number(item.precio || 0);
+                const pf = precioConDescuento(item);
+                return `
+                    <tr class="${item.vendido ? 'sold' : ''}">
+                        <td>${item.codigo}</td>
+                        <td>
+                            <div><strong>${item.nombre}</strong></div>
+                            <div style="color:#666; font-size: 12px;">${item.descripcion || ''}</div>
+                        </td>
+                        <td class="td-price">${money(p)}</td>
+                        <td>
+                            <input class="discount-input" type="number" min="0" max="100" step="1" value="${d}"
+                                   oninput="updateDiscount(${item.id}, this.value)" /> %
+                        </td>
+                        <td class="td-price-disc">${money(pf)}</td>
+                        <td>${item.vendido ? '<span class="badge-sold">YA VENDIDO</span>' : ''}</td>
+                        <td class="td-actions"><button class="remove-btn" onclick="removeFromCart(${item.id})">❌</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            mount.innerHTML = `
+                <div class="table-wrapper">
+                  <table class="cart-table">
+                    <thead>
+                      <tr>
+                        <th style="width:120px;">Código</th>
+                        <th>Producto</th>
+                        <th style="width:140px;">Precio</th>
+                        <th style="width:140px;">Desc. %</th>
+                        <th style="width:160px;">Precio c/desc.</th>
+                        <th style="width:130px;">Estado</th>
+                        <th style="width:100px; text-align:right;">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>
+            `;
+        }
+
+        function updateTotal() {
+            const total = carrito.reduce((sum, item) => sum + precioConDescuento(item), 0);
+            document.getElementById('totalAmount').textContent = money(total);
+        }
+
+        // === Pago / Modal ===
+        function showPaymentModal(method) {
+            if (!carrito.length) { alert('No hay productos seleccionados'); return; }
+            currentPaymentMethod = method;
+            const total = carrito.reduce((sum, i) => sum + precioConDescuento(i), 0);
+            document.getElementById('paymentMessage').innerHTML = `
+                <strong>Venta mediante ${method}</strong><br>por <span style="font-size:18px">${money(total)}</span><br><br>¿Confirmar venta?
+            `;
+            document.getElementById('annotationInput').value = '';
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+        function closeModal() { document.getElementById('paymentModal').style.display = 'none'; }
+
+        async function confirmSale() {
+            try {
+                const fechaHora = new Date().toISOString();
+                const anotacionBase = document.getElementById('annotationInput').value.trim();
+
+                for (const item of carrito) {
+                    const d = descuentos[item.id] || 0;
+                    const finalPrice = precioConDescuento(item);
+                    const anotacion = [anotacionBase, `Desc ${d}% → ${money(finalPrice)}`].filter(Boolean).join(' | ');
+
+                    const { error } = await supabase
+                        .from('productos')
+                        .update({
+                            vendido: 1,
+                            fecha_hora_venta: fechaHora,
+                            medio_de_pago: currentPaymentMethod,
+                            anotacion
+                        })
+                        .eq('id', item.id);
+                    if (error) throw error;
+                }
+
+                alert('¡Venta confirmada exitosamente!');
+                window.location.reload();
+            } catch (err) {
+                console.error('Error confirmando venta:', err);
+                alert('Error al confirmar la venta');
+            }
+        }
+
+        // === Listeners ===
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const q = e.target.value;
+            if ((q || '').length >= 2) showSuggestions(searchProductos(q));
+            else document.getElementById('suggestions').style.display = 'none';
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-section')) document.getElementById('suggestions').style.display = 'none';
+        });
+        window.onclick = function (ev) { const m = document.getElementById('paymentModal'); if (ev.target === m) closeModal(); };
+
+        // === Init ===
+        loadProductos();
+    </script>
+</body>
+</html>
