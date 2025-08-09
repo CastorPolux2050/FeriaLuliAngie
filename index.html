@@ -1,0 +1,494 @@
+
+
+<!-- ES IGUAL A: //https://castorpolux2050.github.io/FeriaLuliAngie/indx800.html -->
+
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feria Luli Angie</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+    h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 2.2em; text-shadow: 2px 2px 4px rgba(0,0,0,.1); }
+
+    .banner { display:none; margin-bottom:12px; padding:10px 12px; border-radius:8px; font-size:14px; }
+    .banner.warn { background:#fff8e1; border:1px solid #ffe082; color:#7a5a00; }
+    .banner.ok { background:#e8f5e9; border:1px solid #a5d6a7; color:#1b5e20; }
+
+    .search-section { margin-bottom: 24px; }
+    .search-input { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; transition: border-color .3s; }
+    .search-input:focus { outline: none; border-color: #667eea; }
+    .suggestions { max-height: 260px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fff; display: none; margin-top: 8px; }
+    .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: background-color .2s; }
+    .suggestion-item:hover { background: #f5f5f5; }
+    .suggestion-item.sold { background: #ffebee; color: #c62828; }
+
+    .cart-section { margin-bottom: 22px; }
+    .cart-section h2 { margin-bottom: 12px; }
+    .empty-cart { text-align: center; color: #666; font-style: italic; padding: 16px; }
+
+    /* Tabla del carrito */
+    .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #e5e5e5; border-radius: 10px; }
+    table.cart-table { width: 100%; border-collapse: collapse; }
+    table.cart-table thead th { position: sticky; top: 0; background: #f8f8f8; z-index: 1; text-align: left; font-weight: bold; color: #333; border-bottom: 1px solid #e5e5e5; padding: 12px; }
+    table.cart-table tbody td { padding: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; text-align: left; }
+    table.cart-table tr.sold { background: #fffbfb; }
+    .td-price, .td-price-disc { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left; }
+    .td-actions { text-align: left; }
+
+    .discount-input { width: 84px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: left; }
+    /* Ocultar flechas de inputs numéricos */
+    input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+    .badge-sold { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #ffebee; color: #c62828; font-size: 12px; font-weight: bold; }
+    .remove-btn { background: #ff4444; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+    .remove-btn:hover { background: #cc0000; }
+
+    .total-section { background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 24px 0 8px; text-align: center; }
+    .total-amount { font-size: 2em; font-weight: bold; color: #333; margin-bottom: 16px; }
+
+    .payment-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 720px; margin: 0 auto; }
+    .payment-btn { padding: 16px 12px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; transition: all .2s; font-weight: bold; text-align: center; }
+    .payment-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,.15); }
+    .btn-efvo-luli { background: #1976D2; color: #fff; }
+    .btn-alias-luli { background: #42A5F5; color: #fff; }
+    .btn-efvo-angie { background: #F57C00; color: #fff; }
+    .btn-alias-angie { background: #FFB74D; color: #fff; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,.5); }
+    .modal-content { background: #fff; margin: 6% auto; padding: 26px; border-radius: 14px; width: 92%; max-width: 560px; text-align: center; }
+    .annotation-section { margin: 18px 0; text-align: left; }
+    .annotation-label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+    .annotation-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 60px; font-family: Arial, sans-serif; }
+    .annotation-input:focus { outline: none; border-color: #667eea; }
+    .modal-buttons { display: flex; gap: 14px; justify-content: center; margin-top: 16px; }
+    .modal-btn { padding: 12px 24px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .btn-cancel { background: #666; color: #fff; }
+    .btn-confirm { background: #4CAF50; color: #fff; }
+
+    .tests { display:none; margin-top: 16px; padding: 12px; border-radius: 8px; border: 1px dashed #bbb; background:#fafafa; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛍️ Feria Luli Angie</h1>
+
+    <div id="banner" class="banner"></div>
+
+    <div class="search-section">
+      <input id="searchInput" class="search-input" placeholder="Buscar producto por código, nombre o descripción..." />
+      <div id="suggestions" class="suggestions"></div>
+    </div>
+
+    <div class="cart-section">
+      <h2>Productos Seleccionados</h2>
+      <div id="cartItems"><div class="empty-cart">No hay productos seleccionados</div></div>
+    </div>
+
+    <div class="total-section">
+      <div class="total-amount">Total: <span id="totalAmount">$0</span></div>
+      <div class="payment-buttons">
+        <button class="payment-btn btn-efvo-luli"  onclick="showPaymentModal('Efvo Luli')">💵 Efvo Luli</button>
+        <button class="payment-btn btn-efvo-angie" onclick="showPaymentModal('Efvo Angie')">💵 Efvo Angie</button>
+        <button class="payment-btn btn-alias-luli" onclick="showPaymentModal('Alias Luli')">🏦 Alias Luli</button>
+        <button class="payment-btn btn-alias-angie" onclick="showPaymentModal('Alias Angie')">🏦 Alias Angie</button>
+      </div>
+    </div>
+
+    <!-- Panel de tests -->
+    <div id="tests" class="tests"></div>
+  </div>
+
+  <!-- Modal de confirmación -->
+  <div id="paymentModal" class="modal">
+    <div class="modal-content">
+      <h2>Confirmar Venta</h2>
+      <p id="paymentMessage"></p>
+      <div class="annotation-section">
+        <label class="annotation-label">Anotación:</label>
+        <textarea id="annotationInput" class="annotation-input" placeholder="Agregar comentario o anotación (opcional)..."></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn btn-cancel"  onclick="closeModal()">Cancelar</button>
+        <button class="modal-btn btn-confirm" onclick="confirmSale()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================
+    // Config & Fallbacks
+    // =====================
+    const supabaseUrl = 'https://lgfvmqmbhhpbtxczpdln.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZnZtcW1iaGhwYnR4Y3pwZGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NTk5MjMsImV4cCI6MjA2NzIzNTkyM30.Akur-f50hXwTkP3pshnMywEUUj0Ev8jCFNo88NiyyVI';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const qs = new URLSearchParams(location.search);
+    const USE_MOCK = qs.get('mock') === '1';
+    const RUN_TESTS = qs.get('test') === '1';
+
+    // === Robustez ante errores externos (e.g. extensiones como MetaMask) ===
+    function showWarnOnce(msg){
+      const b = document.getElementById('banner');
+      if (b.dataset.shown === '1') return;
+      b.dataset.shown = '1';
+      b.className = 'banner warn';
+      b.textContent = msg;
+      b.style.display = 'block';
+    }
+
+    window.addEventListener('error', (e) => {
+      const m = (e?.message || '').toLowerCase();
+      if (m.includes('metamask')) {
+        console.warn('[IGNORADO] Error externo MetaMask:', e.message);
+        e.preventDefault();
+        showWarnOnce('Se detectó un error externo de MetaMask en el navegador. La app continúa normalmente.');
+      }
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      const msg = String(e?.reason?.message || e?.reason || '').toLowerCase();
+      if (msg.includes('metamask')) {
+        console.warn('[IGNORADO] Rechazo no manejado MetaMask:', e.reason);
+        e.preventDefault();
+        showWarnOnce('Se detectó un error externo de MetaMask (promesa). La app continúa normalmente.');
+      }
+    });
+
+    // =====================
+    // Estado
+    // =====================
+    let productos = [];
+    let carrito = [];
+    let descuentos = {}; // { [productoId]: porcentaje }
+    let currentPaymentMethod = '';
+
+    // =====================
+    // Utilidades
+    // =====================
+    const fmt = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const money = n => `$${fmt.format(n ?? 0)}`;
+
+    function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+
+    function precioConDescuento(item) {
+      const d = Number(descuentos[item.id] || 0);
+      const p = Number(item.precio || 0);
+      const final = p * (1 - (clamp(d,0,100) / 100));
+      return Math.max(0, Number.isFinite(final) ? final : 0);
+    }
+
+    function setBannerOk(msg) { const b = document.getElementById('banner'); b.className = 'banner ok'; b.textContent = msg; b.style.display = 'block'; }
+    function setBannerWarn(msg){ const b = document.getElementById('banner'); b.className = 'banner warn'; b.textContent = msg; b.style.display = 'block'; }
+
+    // =====================
+    // Mock Data (para offline / tests)
+    // =====================
+    const MOCK_PRODUCTOS = [
+      { id: 1, codigo: 'A001', nombre:'Remera Rosa', descripcion:'Talle M', tipo:'Indumentaria', precio: 15000, vendido: 0 },
+      { id: 2, codigo: 'A002', nombre:'Pantalón Jean', descripcion:'Talle 42', tipo:'Indumentaria', precio: 42000, vendido: 0 },
+      { id: 3, codigo: 'B010', nombre:'Zapatillas', descripcion:'Nº 39', tipo:'Calzado', precio: 80000, vendido: 1 },
+      { id: 4, codigo: 'C100', nombre:'Cartera Cuero', descripcion:'Color negro', tipo:'Accesorios', precio: 120000, vendido: 0 },
+    ];
+
+    // =====================
+    // Carga de productos
+    // =====================
+    async function loadProductos() {
+      if (USE_MOCK) {
+        productos = MOCK_PRODUCTOS;
+        setBannerWarn('Modo sin conexión (mock). Los datos no se guardarán en la base.');
+        return;
+      }
+      try {
+        const { data, error } = await supabase.from('productos').select('*').order('codigo');
+        if (error) throw error;
+        productos = data || [];
+        setBannerOk('Conectado a Supabase.');
+      } catch (err) {
+        console.error('Fallo carga desde Supabase. Uso mock:', err);
+        productos = MOCK_PRODUCTOS;
+        setBannerWarn('No se pudo conectar a Supabase. Usando datos mock (sin guardar).');
+      }
+    }
+
+    // =====================
+    // Búsqueda
+    // =====================
+    function searchProductos(query) {
+      if (!query || !query.trim()) return [];
+      const q = query.toLowerCase();
+      return productos.filter(p =>
+        String(p.codigo || '').toLowerCase().includes(q) ||
+        String(p.nombre || '').toLowerCase().includes(q) ||
+        String(p.descripcion || '').toLowerCase().includes(q) ||
+        String(p.tipo || '').toLowerCase().includes(q)
+      );
+    }
+
+    function showSuggestions(results) {
+      const el = document.getElementById('suggestions');
+      if (!results.length) { el.style.display = 'none'; return; }
+      el.innerHTML = results.map(p => `
+        <div class="suggestion-item ${p.vendido ? 'sold' : ''}" onclick="addToCart(${p.id})">
+          <strong>${p.codigo}</strong> - ${p.nombre} - ${p.descripcion || ''}
+          <br><small>${p.tipo || ''} | ${money(p.precio)}</small>
+          ${p.vendido ? '<br><small>⚠️ YA VENDIDO</small>' : ''}
+        </div>
+      `).join('');
+      el.style.display = 'block';
+    }
+
+    // =====================
+    // Carrito
+    // =====================
+    function addToCart(productoId) {
+      const item = productos.find(p => p.id === productoId);
+      if (!item) return;
+      if (carrito.find(i => i.id === productoId)) { alert('Este producto ya está en el carrito'); return; }
+      carrito.push(item);
+      if (!(productoId in descuentos)) descuentos[productoId] = 0; // default 0%
+      updateCartDisplay();
+      updateTotal();
+      document.getElementById('searchInput').value = '';
+      document.getElementById('suggestions').style.display = 'none';
+    }
+
+    function removeFromCart(productoId) {
+      carrito = carrito.filter(i => i.id !== productoId);
+      delete descuentos[productoId];
+      updateCartDisplay();
+      updateTotal();
+    }
+
+    function sanitizeIntString(value) {
+      // Toma la primera secuencia de dígitos o 0
+      const m = String(value).match(/\d+/);
+      return m ? m[0] : '0';
+    }
+
+    function shouldAutoBlur(intStr) {
+      if (!intStr) return false;
+      if (intStr === '10') return false;          // permitir tipear 100
+      if (intStr.length >= 3) return parseInt(intStr, 10) === 100; // 100 → 3 dígitos
+      return intStr.length >= 2;                  // 2 dígitos: 20, 35, etc.
+    }
+
+    function updateDiscount(productoId, rawValue) {
+      const intStr = sanitizeIntString(rawValue);
+      let v = parseInt(intStr, 10);
+      if (isNaN(v)) v = 0;
+      v = clamp(v, 0, 100);
+      descuentos[productoId] = v;
+
+      // Espejar en el input
+      const input = document.getElementById(`disc-${productoId}`);
+      if (input) input.value = v;
+
+      // Actualizar solo la fila y el total (sin re-render completo → no pierde foco)
+      const item = carrito.find(i => i.id === productoId) || productos.find(p => p.id === productoId);
+      if (item) {
+        const pf = precioConDescuento(item);
+        const cell = document.getElementById(`pf-${productoId}`);
+        if (cell) cell.textContent = money(pf);
+      }
+      updateTotal();
+
+      // Auto-blur cuando hay 2 dígitos (o 3 para 100)
+      if (shouldAutoBlur(intStr) && input) {
+        input.blur();
+        // opcional: foco al siguiente input de descuento
+        const inputs = Array.from(document.querySelectorAll('.discount-input'));
+        const idx = inputs.indexOf(input);
+        if (idx >= 0 && idx < inputs.length - 1) inputs[idx + 1].focus();
+      }
+    }
+
+    function updateCartDisplay() {
+      const mount = document.getElementById('cartItems');
+      if (!carrito.length) { mount.innerHTML = '<div class="empty-cart">No hay productos seleccionados</div>'; return; }
+
+      const rows = carrito.map(item => {
+        const d = descuentos[item.id] || 0;
+        const p = Number(item.precio || 0);
+        const pf = precioConDescuento(item);
+        return `
+          <tr class="${item.vendido ? 'sold' : ''}">
+            <td>${item.codigo}</td>
+            <td>
+              <div><strong>${item.nombre}</strong></div>
+              <div style="color:#666; font-size: 12px;">${item.descripcion || ''}</div>
+            </td>
+            <td class="td-price">${money(p)}</td>
+            <td>
+              <input id="disc-${item.id}" data-id="${item.id}" class="discount-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="100" step="1" value="${d}" oninput="updateDiscount(${item.id}, this.value)" /> %
+            </td>
+            <td class="td-price-disc" id="pf-${item.id}">${money(pf)}</td>
+            <td>${item.vendido ? '<span class="badge-sold">YA VENDIDO</span>' : ''}</td>
+            <td class="td-actions"><button class="remove-btn" onclick="removeFromCart(${item.id})">❌</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      mount.innerHTML = `
+        <div class="table-wrapper">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th style="width:120px;">Código</th>
+                <th>Producto</th>
+                <th style="width:140px;">Precio</th>
+                <th style="width:140px;">Desc. %</th>
+                <th style="width:160px;">Precio c/desc.</th>
+                <th style="width:130px;">Estado</th>
+                <th style="width:100px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function updateTotal() {
+      const total = carrito.reduce((sum, item) => sum + precioConDescuento(item), 0);
+      document.getElementById('totalAmount').textContent = money(total);
+    }
+
+    // =====================
+    // Pago / Modal
+    // =====================
+    function showPaymentModal(method) {
+      if (!carrito.length) { alert('No hay productos seleccionados'); return; }
+      currentPaymentMethod = method;
+      const total = carrito.reduce((sum, i) => sum + precioConDescuento(i), 0);
+      document.getElementById('paymentMessage').innerHTML = `
+        <strong>Venta mediante ${method}</strong><br>por <span style="font-size:18px">${money(total)}</span><br><br>¿Confirmar venta?`;
+      document.getElementById('annotationInput').value = '';
+      document.getElementById('paymentModal').style.display = 'block';
+    }
+    function closeModal() { document.getElementById('paymentModal').style.display = 'none'; }
+
+    // Solo anotación base + reventa
+    function buildAnotacion(base, item) {
+      const parts = [];
+      if (base && base.trim()) parts.push(base.trim());
+      if (item?.vendido) parts.push('VENDIDO NUEVAMENTE');
+      return parts.join(' | ');
+    }
+
+    async function confirmSale() {
+      try {
+        const fechaHora = new Date().toISOString();
+        const anotacionBase = document.getElementById('annotationInput').value.trim();
+
+        if (USE_MOCK) {
+          alert('Venta (mock) confirmada. No se guardó en la base.');
+          carrito = []; descuentos = {}; updateCartDisplay(); updateTotal(); closeModal();
+          return;
+        }
+
+        for (const item of carrito) {
+          const finalPrice = Number(precioConDescuento(item).toFixed(2));
+          const anotacion = buildAnotacion(anotacionBase, item);
+
+          const { error } = await supabase
+            .from('productos')
+            .update({
+              vendido: 1,
+              fecha_hora_venta: fechaHora,
+              medio_de_pago: currentPaymentMethod,
+              precio_venta: finalPrice,
+              anotacion
+            })
+            .eq('id', item.id);
+          if (error) throw error;
+        }
+
+        alert('¡Venta confirmada exitosamente!');
+        window.location.reload();
+      } catch (err) {
+        console.error('Error confirmando venta:', err);
+        alert('Error al confirmar la venta');
+      }
+    }
+
+    // =====================
+    // Listeners
+    // =====================
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const q = e.target.value;
+      if ((q || '').length >= 2) showSuggestions(searchProductos(q));
+      else document.getElementById('suggestions').style.display = 'none';
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-section')) document.getElementById('suggestions').style.display = 'none';
+    });
+    window.onclick = function (ev) { const m = document.getElementById('paymentModal'); if (ev.target === m) closeModal(); };
+
+    // Solo permitir números en descuento (extra robustez)
+    document.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('discount-input')) {
+        const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab'];
+        if (allowed.includes(e.key)) return;
+        if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+      }
+    });
+
+    // =====================
+    // Tests (se activan con ?test=1)
+    // =====================
+    function runTests() {
+      const out = [];
+      function assertEqual(name, a, b) { out.push({ name, pass: Math.abs(a - b) < 0.0001, details: `${a} === ${b}` }); }
+      function assertTrue(name, val){ out.push({ name, pass: !!val, details: String(val) }); }
+
+      // EXISTENTES (no tocar)
+      descuentos = {1:0}; const item1 = { id:1, precio: 1000 }; assertEqual('TC1 precio 0%',  precioConDescuento(item1), 1000);
+      descuentos = {1:10}; assertEqual('TC2 precio 10%', precioConDescuento(item1), 900);
+      descuentos = {1:100}; assertEqual('TC3 precio 100%', precioConDescuento(item1), 0);
+      descuentos = {1:150}; assertEqual('TC4 clamp >100', precioConDescuento(item1), 0);
+      descuentos = {1:-50}; assertEqual('TC5 clamp negativo', precioConDescuento(item1), 1000);
+      const itA = { id: 11, precio: 200 }; const itB = { id: 12, precio: 300 };
+      carrito = [itA, itB]; descuentos = { 11: 10, 12: 50 };
+      const total = carrito.reduce((s,i)=> s + precioConDescuento(i), 0); assertEqual('TC6 total', total, 200*0.9 + 300*0.5);
+      productos = MOCK_PRODUCTOS; const r = searchProductos('Jean'); out.push({ name:'TC7 búsqueda', pass: r.length===1 && r[0].codigo==='A002', details: `len=${r.length}` });
+
+      // NUEVOS (enteros + blur + anotación sin descuento)
+      descuentos = {}; updateDiscount(96, '15.7'); assertEqual('TC8 updateDiscount decimal → entero (floor por defecto)', descuentos[96], 15);
+      descuentos = {}; updateDiscount(99, '250'); assertEqual('TC9 clamp updateDiscount >100', descuentos[99], 100);
+      descuentos = {}; updateDiscount(98, '-5');  assertEqual('TC10 clamp updateDiscount <0',  descuentos[98], 0);
+      descuentos = {}; updateDiscount(97, 'abc');  assertEqual('TC11 updateDiscount texto → 0', descuentos[97], 0);
+      assertTrue('TC12 shouldAutoBlur 1 dígito NO', !shouldAutoBlur('2'));
+      assertTrue('TC13 shouldAutoBlur 2 dígitos SÍ', shouldAutoBlur('20'));
+      assertTrue('TC14 shouldAutoBlur "10" NO (para permitir 100)', !shouldAutoBlur('10'));
+      assertTrue('TC15 shouldAutoBlur "100" SÍ', shouldAutoBlur('100'));
+
+      const anot = buildAnotacion('nota base', { vendido: 1 });
+      assertTrue('TC16 anotación reventa incluye etiqueta', anot.includes('VENDIDO NUEVAMENTE'));
+      assertTrue('TC17 anotación sin texto de descuento', !/Desc\s\d+%/.test(anot));
+
+      const passCount = out.filter(t => t.pass).length;
+      const el = document.getElementById('tests');
+      el.style.display = 'block';
+      el.textContent = `Tests: ${passCount}/${out.length} OK\n` + out.map(t => `${t.pass ? '✅' : '❌'} ${t.name} — ${t.details}`).join('\n');
+    }
+
+    // =====================
+    // Init
+    // =====================
+    (async () => {
+      await loadProductos();
+      if (RUN_TESTS) runTests();
+    })();
+  </script>
+</body>
+</html>
